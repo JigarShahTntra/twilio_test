@@ -1,11 +1,11 @@
 module Verify
-  def valid_phone_number?(country_code, phone_number)
-    response = Authy::PhoneVerification.start(country_code: country_code, phone_number: phone_number)
-    response.success?
+  def create_authy_user(country_code, phone_number)
+    authy = Authy::API.register_user( cellphone: phone_number,
+                                      country_code: country_code)
+    @user.update(authy_id: authy.id)
   end
 
-  def valid_confirmation_code?(code, country_code, phone_number)
-    response = Authy::PhoneVerification.check(verification_code: code, country_code: country_code, phone_number: phone_number)
-    response.success?
+  def send_token
+    Authy::API.request_sms(id: @user.authy_id, force: true)
   end
 end

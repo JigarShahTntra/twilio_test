@@ -4,14 +4,18 @@
     <%= @user.verified %>
   </p>
 
-  <% if !@user.verified %>
+  <% unless @user.verified %>
     <h3>Verify your number</h3>
     <%= form_tag @user, url: user_path(@user.id), :method => :put do %>
       <%= label_tag :code, "Enter the code you received at #{@user.phone_number} here" %>
       <%= text_field_tag :code %>
       <%= submit_tag 'Verfiy' %>
     <% end %>
+    <%= link_to 'resend', user_resend_path(@user) %>
   <% end %>
+
+
+
 
 <%= link_to 'Edit', edit_user_path(@user) %> |
 <%= link_to 'Back', users_path %>

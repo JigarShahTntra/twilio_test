@@ -1,6 +1,6 @@
 class UsersController < ApplicationController
   include Verify
-  before_action :set_user, only: [:show, :edit, :update, :destroy]
+  before_action :set_user, only: [:show, :edit, :update, :destroy, :resend]
 
   # GET /users
   # GET /users.json
@@ -26,9 +26,11 @@ class UsersController < ApplicationController
   # POST /users.json
   def create
     @user = User.new(user_params)
-
-    if valid_phone_number?(user_params['country_code'], user_params['phone_number'])
-      @user.save
+    if @user.save
+      # create authy user
+      create_authy_user(user_params['country_code'], user_params['phone_number'])
+      # Send Verification Code
+      send_token
       redirect_to @user, notice: 'You have a valid phone number!'
     else
       redirect_to @user, alert: 'invalid or expired token'
@@ -38,7 +40,8 @@ class UsersController < ApplicationController
   # PATCH/PUT /users/1
   # PATCH/PUT /users/1.json
   def update
-    if valid_confirmation_code?(params['code'], @user.country_code, @user.phone_number)
+    token = Authy::API.verify(id: @user.authy_id, token: params[:code])
+    if token.ok?
       @user.update(verified: true)
       redirect_to users_path, notice: "#{@user.phone_number} has been verified!"
     else
@@ -56,10 +59,18 @@ class UsersController < ApplicationController
     end
   end
 
+  def resend
+    unless @user.authy_id.present?
+      create_authy_user(@user.country_code, @user.phone_number)
+    end
+    send_token
+    redirect_to @user
+  end
+
   private
     # Use callbacks to share common setup or constraints between actions.
     def set_user
-      @user = User.find(params[:id])
+      @user = User.find(params[:id] || params[:user_id])
     end
 
     # Never trust parameters from the scary internet, only allow the white list through.
