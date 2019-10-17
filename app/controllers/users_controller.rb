@@ -28,7 +28,7 @@ class UsersController < ApplicationController
     @user = User.new(user_params)
     if @user.save
       # create authy user
-      create_authy_user(user_params['country_code'], user_params['phone_number'])
+      create_authy_user(user_params['country_code'], user_params['phone_number'], user_params['email'])
       # Send Verification Code
       send_token
       redirect_to @user, notice: 'You have a valid phone number!'
@@ -40,12 +40,18 @@ class UsersController < ApplicationController
   # PATCH/PUT /users/1
   # PATCH/PUT /users/1.json
   def update
-    token = Authy::API.verify(id: @user.authy_id, token: params[:code])
-    if token.ok?
-      @user.update(verified: true)
-      redirect_to users_path, notice: "#{@user.phone_number} has been verified!"
+    if params[:code].present?
+      token = Authy::API.verify(id: @user.authy_id, token: params[:code])
+      if token.ok?
+        @user.update(verified: true)
+        redirect_to users_path, notice: "#{@user.phone_number} has been verified!"
+      else
+        redirect_to @user, alert: 'invalid or expired token'
+      end
+    elsif @user.update(user_params)
+      redirect_to root_path
     else
-      redirect_to @user, alert: 'invalid or expired token'
+      redirect_to @user, alert: 'invalid update entries.'
     end
   end
 
@@ -61,7 +67,7 @@ class UsersController < ApplicationController
 
   def resend
     unless @user.authy_id.present?
-      create_authy_user(@user.country_code, @user.phone_number)
+      create_authy_user(@user.country_code, @user.phone_number, @user.email)
     end
     send_token
     redirect_to @user
@@ -75,6 +81,6 @@ class UsersController < ApplicationController
 
     # Never trust parameters from the scary internet, only allow the white list through.
     def user_params
-      params.require(:user).permit(:name, :country_code, :phone_number)
+      params.require(:user).permit(:name, :country_code, :phone_number, :email)
     end
 end

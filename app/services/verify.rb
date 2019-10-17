@@ -1,6 +1,6 @@
 module Verify
-  def create_authy_user(country_code, phone_number)
-    authy = Authy::API.register_user( cellphone: phone_number,
+  def create_authy_user(country_code, phone_number, email)
+    authy = Authy::API.register_user( email: email, cellphone: phone_number,
                                       country_code: country_code)
     @user.update(authy_id: authy.id)
   end
